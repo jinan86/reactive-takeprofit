@@ -1,0 +1,24 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Project secrets — NEVER commit
+.wallet.json
+deployments/*.json
+!deployments/.gitkeep
+
+# Env / local
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+demo-video*.log
+
+# Video intermediates (only demo-video.mp4 is kept)
+video-slides/

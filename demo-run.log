@@ -1,0 +1,61 @@
+Deployer/payee: 0x9e377851c1DF9aCB840d5081572E3AF7C45ac449
+tUSD=0x594874a10bC1d0197344d636db835d37e41BC4cf tTOKEN=0xE29FB5755A06f63B6885E8bCFb91F6D66f7056d3 oracle=0xf3b5fe72dEDf5EcD0C937EA67089e3503358B099 vault=0x9A2563B6c28C0fD0b4776567C6403A2494Fb9B1E
+reactive=0x3986fd00e872773fC987a718c6468ffF48c6CBFB executor=0xD9Cb23D635024fdD9ab5053B0e56D04d97222E0D
+
+=== Step 0: approve vault for 10 tTOKEN ===
+ approve tx: 0x1b45a2979b6199adc120c4ad601759e9cc0ad887f7d0e9eaccacb9be6bdea138
+
+=== Step 1: create order — sell 10 tTOKEN at >= $2000, payee deployer ===
+ createOrder tx: 0xd9327b33ce0c774264433e2a177e4bf77bedc37241897951020095700e06b209
+ order id: 2
+ https://sepolia.basescan.org/tx/0xd9327b33ce0c774264433e2a177e4bf77bedc37241897951020095700e06b209
+ vault tTOKEN balance: 10 tTOKEN (expect 10)
+ nextOrderId: 3
+
+=== Step 2: price $1500 (BELOW target) — expect NO execution ===
+ setPrice(1500) tx: 0x93102d4bae4ad2335671cc2287075a1a64d43bbdfdb0ebf1595f52ed51cb4b52
+ https://sepolia.basescan.org/tx/0x93102d4bae4ad2335671cc2287075a1a64d43bbdfdb0ebf1595f52ed51cb4b52
+Polling reactive.reactCount -> 2 (order mirror + price) (want 2) ... OK after 1x10s (=2)
+ reactive.reactCount: 2
+ reactive.actedCount: 0 (expect 0)
+ reactive.lastPrice: 150000000000 [1.5e11] (expect 150000000000)
+ order active: 0x9e377851c1DF9aCB840d5081572E3AF7C45ac449
+0xE29FB5755A06f63B6885E8bCFb91F6D66f7056d3
+10000000000000000000 [1e19]
+200000000000 [2e11]
+0x9e377851c1DF9aCB840d5081572E3AF7C45ac449
+true
+false
+ payee tUSD: 0 (expect 0)
+
+=== Step 3: price $2100 (ABOVE target) — expect execution ===
+ setPrice(2100) tx: 0xb39200fd771630810a0519223da81a5571720ce04764551118ecd86daa2796f8
+ https://sepolia.basescan.org/tx/0xb39200fd771630810a0519223da81a5571720ce04764551118ecd86daa2796f8
+Polling reactive.actedCount -> 1 (want 1) ... OK after 1x10s (=1)
+ reactive.reactCount: 3
+ reactive.actedCount: 1 (expect 1)
+ reactive.lastPrice: 210000000000 [2.1e11] (expect 210000000000)
+Polling order executed (want true) ... OK after 1x10s (=true)
+ order #2: 0x9e377851c1DF9aCB840d5081572E3AF7C45ac449
+0xE29FB5755A06f63B6885E8bCFb91F6D66f7056d3
+10000000000000000000 [1e19]
+200000000000 [2e11]
+0x9e377851c1DF9aCB840d5081572E3AF7C45ac449
+false
+true
+ payee tUSD: 21000 (expect 21000)
+ vault tUSD left: 979000 (expect 979000)
+
+=== Step 4: price $2200 again — second callback must NOT pay twice ===
+ setPrice(2200) tx: 0x4c6eb2e918059802f8ae1a5089e763cc0e0c8c1ac3462c14fb1c08e13989fb9d
+ https://sepolia.basescan.org/tx/0x4c6eb2e918059802f8ae1a5089e763cc0e0c8c1ac3462c14fb1c08e13989fb9d
+ reactive.actedCount: 2 (expect 2 — duplicate callback requested)
+ order #2 executed stays true; payee tUSD: 21000 (expect still 21000 — no double pay)
+
+=== Step 5: unauthenticated / direct execution attempts must fail ===
+-- direct vault.executeOrder as deployer (not executor):
+Error: Failed to estimate gas: server returned an error response: error code 3: execution reverted, data: "0x5cf20d630000000000000000000000009e377851c1df9acb840d5081572e3af7c45ac449": NotExecutor(0x9e377851c1DF9aCB840d5081572E3AF7C45ac449)
+-- direct executor.execute as deployer (not the proxy):
+Error: Failed to estimate gas: server returned an error response: error code 3: execution reverted, data: "0xc55ddc970000000000000000000000009e377851c1df9acb840d5081572e3af7c45ac449000000000000000000000000476f44b11f5c942c58f4c8e3d0300e5710743585": NotAuthorized(0x9e377851c1DF9aCB840d5081572E3AF7C45ac449, 0x476F44b11F5C942c58f4c8E3d0300E5710743585)
+
+Demo done. See demo-run.log for the full trail.
